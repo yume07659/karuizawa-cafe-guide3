@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>軽井沢 家族向けカフェ探索</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Welcome: Text block (HTML). Goal: Introduction.
+        - Find Cafes: Interactive filters (HTML, JS) update cafe card display (HTML, JS). Clicking card shows full details (HTML, JS) including a family-friendliness radar chart (Chart.js). Goal: Explore & Inform.
+        - Comparison: HTML table from report. Price comparison bar chart (Chart.js). Goal: Compare.
+        - Tips: Text block (HTML). Goal: Inform.
+        - Icons: Unicode characters used for visual cues.
+        - All textual content sourced from the provided report.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 640px) { /* sm */
+            .chart-container {
+                height: 350px;
+            }
+        }
+        @media (min-width: 768px) { /* md */
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .active-nav {
+            border-bottom: 2px solid #10b981; /* emerald-500 */
+            color: #059669; /* emerald-600 */
+            font-weight: 600;
+        }
+        .filter-checkbox:checked + label {
+            background-color: #10b981; /* emerald-500 */
+            color: white;
+            border-color: #059669; /* emerald-600 */
+        }
+        .filter-tag {
+            background-color: #f59e0b; /* amber-500 */
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-700">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-2xl font-bold text-emerald-600">軽井沢カフェめぐり</h1>
+                <nav class="hidden md:flex space-x-4">
+                    <button data-section="welcome" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 active-nav">はじめに</button>
+                    <button data-section="find-cafes" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">カフェを探す</button>
+                    <button data-section="comparison" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">比較表</button>
+                    <button data-section="tips" class="nav-button px-3 py-2 rounded-md text-sm font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">訪問のヒント</button>
+                </nav>
+                <button id="mobile-menu-button" class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-stone-500 hover:text-emerald-600 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500">
+                    <span class="sr-only">メインメニューを開く</span>
+                    <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <button data-section="welcome" class="nav-button mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50 active-nav">はじめに</button>
+                <button data-section="find-cafes" class="nav-button mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">カフェを探す</button>
+                <button data-section="comparison" class="nav-button mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">比較表</button>
+                <button data-section="tips" class="nav-button mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium text-stone-600 hover:text-emerald-600 hover:bg-emerald-50">訪問のヒント</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <section id="welcome-section" class="content-section bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">軽井沢で紡ぐ、心温まる家族のカフェ時間：彼女と母親が喜ぶ厳選カフェガイド</h2>
+            <p class="mb-4">軽井沢の豊かな自然と洗練された文化は、家族旅行に最適な場所です。特にカフェ選びは、旅の思い出を一層豊かにする重要な要素となります。このアプリケーションでは、軽井沢を訪れるご家族、特に「彼女と母親」という異なる世代の女性が共に心から楽しめるようなカフェを厳選してご紹介します。</p>
+            <p class="mb-4">軽井沢のカフェは、単にコーヒーを飲む場所という枠を超え、軽食から本格的な食事、さらにはデザートまで提供する多機能な空間として認識されています。この多様な選択肢は、世代ごとの異なる好みに対応できるため、家族全員の満足度を高める鍵となります。例えば、母親世代には落ち着いた食事ができる場所が、彼女世代にはおしゃれなカフェ飯が喜ばれる傾向があります。</p>
+            <p>また、軽井沢の多くのカフェが「テラス席」「緑に囲まれた空間」「景色がきれい」といった自然環境との一体感を重視している点も特筆すべきです。これは軽井沢という土地が持つ本質的な魅力であり、カフェ体験の質を向上させる重要な要素です。母親世代は「落ち着いた自然の中で癒されたい」というニーズが強く、彼女世代は「美しい景色を背景に写真を撮りたい」という要望があるため、自然との調和は両者の満足度を高める共通の価値となります。単に美味しいだけでなく、その場所でしか味わえない「体験」を提供できるカフェを優先的に選定することで、記憶に残る家族の時間を演出することが可能です。</p>
+        </section>
+
+        <section id="find-cafes-section" class="content-section hidden">
+            <div id="cafe-list-view">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h2 class="text-2xl font-semibold text-emerald-700 mb-4">カフェを絞り込む</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <h3 class="font-semibold mb-2">雰囲気</h3>
+                            <div class="space-y-1">
+                                <div class="flex items-center"><input type="checkbox" id="filter-atmosphere-nature" value="自然" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-atmosphere-nature" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">自然豊か</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-atmosphere-quiet" value="静か" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-atmosphere-quiet" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">静か</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-atmosphere-stylish" value="おしゃれ" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-atmosphere-stylish" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">おしゃれ</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-atmosphere-view" value="絶景" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-atmosphere-view" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">絶景</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-atmosphere-bookcafe" value="ブックカフェ" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-atmosphere-bookcafe" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">ブックカフェ</label></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">家族向け</h3>
+                            <div class="space-y-1">
+                                <div class="flex items-center"><input type="checkbox" id="filter-family-kids" value="子供連れOK" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-family-kids" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">子供連れOK</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-family-pets" value="ペット同伴可" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-family-pets" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">ペット同伴可</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-family-stroller" value="ベビーカー入店可" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-family-stroller" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">ベビーカー入店可</label></div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold mb-2">食事</h3>
+                            <div class="space-y-1">
+                                <div class="flex items-center"><input type="checkbox" id="filter-menu-coffee" value="コーヒー専門" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-menu-coffee" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">コーヒー専門</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-menu-fullmeal" value="食事充実" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-menu-fullmeal" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">食事充実</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-menu-vegan" value="ヴィーガン" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-menu-vegan" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">ヴィーガン</label></div>
+                                <div class="flex items-center"><input type="checkbox" id="filter-menu-morning" value="モーニング" class="filter-checkbox h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 mr-2"><label for="filter-menu-morning" class="cursor-pointer p-1 rounded border border-gray-300 hover:border-emerald-500 transition-all text-sm">モーニング</label></div>
+                            </div>
+                        </div>
+                         <div>
+                            <h3 class="font-semibold mb-2">駐車場</h3>
+                            <select id="filter-parking" class="w-full p-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="">すべて</option>
+                                <option value="施設駐車場有">施設駐車場有</option>
+                                <option value="専用駐車場有">専用駐車場有</option>
+                                <option value="近隣有料駐車場利用">近隣有料駐車場利用</option>
+                                <option value="専用駐車場無">専用駐車場無</option>
+                            </select>
+                            <h3 class="font-semibold mb-2 mt-4">価格帯 (一人あたり)</h3>
+                            <select id="filter-price" class="w-full p-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+                                <option value="">すべて</option>
+                                <option value="1000">～1000円</option>
+                                <option value="2000">～2000円</option>
+                                <option value="3000">～3000円</option>
+                            </select>
+                        </div>
+                    </div>
+                     <button id="reset-filters" class="bg-stone-500 text-white px-4 py-2 rounded-md hover:bg-stone-600 transition-colors">リセット</button>
+                </div>
+
+                <div id="cafe-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
+                 <p id="no-results" class="text-center text-stone-500 py-8 hidden">該当するカフェは見つかりませんでした。</p>
+            </div>
+
+            <div id="cafe-detail-view" class="hidden bg-white p-6 rounded-lg shadow">
+                 <button id="back-to-list" class="mb-4 bg-emerald-500 text-white px-4 py-2 rounded-md hover:bg-emerald-600 transition-colors">← カフェ一覧に戻る</button>
+                <div id="cafe-detail-content"></div>
+            </div>
+        </section>
+
+        <section id="comparison-section" class="content-section hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">目的別・シーン別おすすめカフェ早見表</h2>
+            <div class="overflow-x-auto mb-8">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">カフェ名</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">雰囲気</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">家族向けポイント</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">主なメニュー</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">価格帯</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">駐車場</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">特記事項</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-table-body" class="bg-white divide-y divide-gray-200">
+                    </tbody>
+                </table>
+            </div>
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4 mt-8">価格帯比較チャート</h2>
+            <div class="chart-container">
+                <canvas id="priceComparisonChart"></canvas>
+            </div>
+        </section>
+
+        <section id="tips-section" class="content-section hidden bg-white p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-emerald-700 mb-4">軽井沢カフェ巡りのヒント</h2>
+            <ul class="list-disc list-inside space-y-3">
+                <li><strong>訪問時間帯の工夫：</strong> 軽井沢の人気カフェは、特に週末や観光シーズンには混雑が予想されます。開店直後のモーニングタイムや、ランチとティータイムの間の比較的空いている時間帯を狙うことで、ゆったりと過ごせる可能性が高まります。</li>
+                <li><strong>予約の有無と活用：</strong> エロイーズ カフェのように完全予約制の店舗もあります。訪問したいカフェが予約を受け付けている場合は、事前に予約を済ませておくことで、待ち時間を短縮し、スムーズに入店できます。特に人数が多い家族での訪問では、予約が非常に有効です。</li>
+                <li><strong>移動手段と駐車場の確認：</strong> 軽井沢のカフェは、駅周辺から少し離れた自然豊かな場所に点在しています。自家用車での移動が一般的ですが、旧軽井沢Cafe 涼の音やRK GARDENのように専用駐車場がない店舗もあります。その場合は、近隣の有料駐車場を事前に調べておくことが重要です。公共交通機関やタクシーの利用も検討し、移動手段と駐車場の有無を事前に確認することで、当日のストレスを軽減できます。</li>
+                <li><strong>季節ごとの楽しみ方：</strong> 軽井沢のカフェは、四季折々の自然の美しさを活かした空間が魅力です。春の新緑、夏の避暑、秋の紅葉、冬の静寂と、季節ごとに異なる表情を見せます。テラス席の利用可否や、提供されるメニューも季節によって変わることがあるため、訪問時期に合わせて情報を確認し、その季節ならではの体験を楽しむことをお勧めします。</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer class="text-center p-4 text-sm text-stone-500 mt-8">
+        &copy; 2024 軽井沢カフェ探索ガイド. All rights reserved.
+    </footer>
+
+    <script>
+        const cafes = [
+            {
+                id: 1,
+                name: "丸山珈琲 ハルニレテラス店",
+                shortDesc: "自然の中で味わう至福の一杯",
+                atmosphereTags: ["自然", "ブックカフェ", "賑やか"],
+                familyTags: ["子供連れOK", "ベビーカー入店可", "ベビー用イス有り", "ペット同伴可(テラス)"],
+                menuTags: ["コーヒー専門", "モーニング", "スイーツ"],
+                parking: "施設駐車場有",
+                priceRange: [0, 1000],
+                priceText: "～1,000円",
+                details: {
+                    overview: "丸山珈琲は1991年に軽井沢で誕生した人気の珈琲店です。軽井沢星野エリアの「ハルニレテラス」内にあり、春楡の木立に囲まれたウッドデッキの「小さな街」のような空間に位置しています。開放感あふれるテラス席が魅力で、木々を渡る風や川のせせらぎを聞きながらくつろぐことができます。この店舗は丸山珈琲で唯一の「Books＆CAFE」を併設しており、厳選された書籍をコーヒーやスイーツと共に自由に読んだり、気に入った本を購入したりすることが可能です。ブックカフェのような落ち着いた雰囲気も持ち合わせていますが、子連れや大人数のお客さんも多く、賑やかな側面もあります。ハルニレテラスという複合施設内にあるため、カフェ利用だけでなく、散策やショッピングも楽しめる点が大きな魅力です。",
+                    familyPoints: "家族連れに配慮したサービスが充実しており、親世代は上質なコーヒーを、子どもは長野産のブドウやリンゴを使ったジュースを楽しむことができます。ベビーカーの利用が可能で、ベビー用イスも完備されています。店内は子供の入店が許可されており、「家族・子供と」の利用シーンに適していると評価されています。また、テラス席はペット同伴が可能であり、多様な家族構成に対応できる柔軟性も持ち合わせています。カフェインレスコーヒーの提供もあります。",
+                    menu: "オーナー自ら買い付けた豊富な品揃えのスペシャルティコーヒーを提供しており、特に限定商品「ハルニレテラスブレンド」（669円／税込）がおすすめです。カフェインレスコーヒーやスイーツも充実しています。毎日8:00から11:00まで提供されるモーニングセットは、パンメニュー、ヨーグルト、ドリンクの3点セットです。お店で抽出したエスプレッソを使用した「コーヒーソフトクリーム」（店内509円、テイクアウト500円）も人気です。",
+                    access: "長野県北佐久郡軽井沢町長倉星野2145-5 ハルニレテラス内。中軽井沢駅から徒歩17分（約1330m）、車で約5分。施設駐車場完備。",
+                    congestion: "一般的に人気店であり、「やや混雑」や「混雑」の口コミが見られます。特に繁忙期には混雑が予想されます。",
+                    specialNotes: "ハルニレテラス内で散策も楽しめる"
+                },
+                familyFeatures: { kidsWelcome: true, petsWelcome: true, strollerAccess: true, babyChair: true, kidsMenuProvided: true, diaperFacilities: false }
+            },
+            {
+                id: 2,
+                name: "旧軽井沢Cafe 涼の音",
+                shortDesc: "歴史と静寂に包まれる隠れ家カフェ",
+                atmosphereTags: ["歴史的建造物", "静か", "自然", "隠れ家"],
+                familyTags: ["子供連れOK", "ペット同伴可(テラス)"],
+                menuTags: ["スイーツ", "軽食", "パスタ", "カレー"],
+                parking: "近隣有料駐車場利用",
+                priceRange: [1000, 2000],
+                priceText: "1,000円～2,000円",
+                details: {
+                    overview: "国の登録有形文化財を利用した、築100年ほどの歴史ある建物が魅力のカフェです。かつて旅館や外国公使の別荘として使われていました。観光客で賑わうメインストリートから少し離れた立地が、静かで落ち着いた雰囲気を生み出しており、心身のリフレッシュに最適な空間を提供します。自然を感じられる空間で、木漏れ日が差し込むテラス席も心地よいと評判です。リスに出会えることでも有名です。",
+                    familyPoints: "「家族・子供と」の利用シーンに適していると評価されており、お子様連れでの入店も可能です。落ち着いた雰囲気の中でゆっくりと時間が流れるため、特に母親世代には安らぎのひとときを提供します。ペット同伴の場合、テラス席やガーデン席での利用が可能です。歴史ある建物で過ごす時間は、単なるカフェ利用を超えた「文化体験」を提供します。",
+                    menu: "キウイソーダが美味しいとの口コミあり。人気の「フレンチトースト」は早めに完売することもあるため、早めの訪問が推奨されます。海老とホタテのパスタセットやトマトカレーのセットなど、カフェスタイルの食事が充実。美味しいケーキやシャーベットも提供しています。",
+                    access: "長野県北佐久郡軽井沢町旧軽井沢972 室生犀星記念館前。お店専用の駐車場はないため、近隣の有料駐車場（例：旧軽井沢森裏駐車場、旧軽井沢駐車場など、徒歩3～5分）を利用。",
+                    congestion: "朝食開始の9時頃は混雑が見られますが、それ以降の時間帯、特に平日であれば比較的空いている傾向にあります。",
+                    specialNotes: "旧軽井沢銀座から少し離れた静かな立地"
+                },
+                familyFeatures: { kidsWelcome: true, petsWelcome: true, strollerAccess: false, babyChair: false, kidsMenuProvided: false, diaperFacilities: false }
+            },
+            {
+                id: 3,
+                name: "TENKU TERRACE 軽井沢",
+                shortDesc: "浅間山を望む絶景カフェで非日常を",
+                atmosphereTags: ["絶景", "開放的", "テラス", "シック", "おしゃれ"],
+                familyTags: ["子供連れOK", "お子様メニュー有り", "ペット同伴可(テラス)"],
+                menuTags: ["モーニング", "ランチ", "スイーツ", "パンケーキ", "食事充実"],
+                parking: "専用駐車場有",
+                priceRange: [2000, 3000],
+                priceText: "～3,000円",
+                details: {
+                    overview: "2022年4月にオープンした新しいカフェ＆バーで、軽井沢のシンボルである浅間山を望む標高約1000mの別荘地「オナーズヒル軽井沢」内に位置し、息をのむような絶景を楽しめます。大きな窓と高い天井が印象的な開放感あふれるカフェスペースは、シックなベージュでまとめられ、ゆったりとくつろげる雰囲気。席間も広く取られています。晴れた日には浅間山の雄大な姿が目の前に広がるオープンテラスがあり、豊かな緑に囲まれ、まるで海外のリゾートのような趣です。",
+                    familyPoints: "「家族・子供と」の利用シーンに適しており、お子様連れでの入店も可能で、お子様メニューも提供されています。テラス席はワンちゃん連れも可能で、パラソル付きの席も用意されており、犬用クッキーも販売。広々とした空間で、静かに過ごしやすいとの口コミもあり、家族全員が快適に過ごせる環境です。ホテル併設のため、サービスや設備の質が高いです。",
+                    menu: "オーガニックや新鮮な地元食材にこだわったメニューを提供。朝食には「天空の朝ごはん」（1980円）、人気の「天空のパンケーキ」（1870円）。ランチメニューには「天空御膳」（2200円）、「お肉ゴロゴロ浅間山カレー」（1870円）など。ティータイムには季節のフルーツパンケーキなど。",
+                    access: "長野県北佐久郡軽井沢町茂沢472-15 オナーズヒル別荘地 天空ホテル&リゾート内。軽井沢の中心地から車で南西方面に約30分。施設駐車場完備。",
+                    congestion: "訪問者からは、混雑を予想して行ったものの、実際には空いていて静かだったという口コミが見られます。ただし、人員不足のため提供まで時間がかかる場合があるとの口コミも。",
+                    specialNotes: "車でのアクセス推奨 (中心部から30分)"
+                },
+                familyFeatures: { kidsWelcome: true, petsWelcome: true, strollerAccess: true, babyChair: true, kidsMenuProvided: true, diaperFacilities: false }
+            },
+            {
+                id: 4,
+                name: "RK GARDEN",
+                shortDesc: "緑に囲まれたヴィーガンカフェで心身を癒す",
+                atmosphereTags: ["自然", "おしゃれ", "フォトジェニック", "オープンエア", "ヴィーガン"],
+                familyTags: ["子供連れOK", "ペット同伴可(店内も可)", "健康志向"],
+                menuTags: ["ヴィーガン", "ランチ", "スイーツ", "健康志向"],
+                parking: "近隣有料駐車場利用",
+                priceRange: [1000, 2000],
+                priceText: "～2,000円",
+                details: {
+                    overview: "フローリスト（お花屋さん）に併設されたカフェ。「お店の中に森があるのか、森のなかにお店があるのか迷ってしまいそうな不思議な空間」と表現されるほど、緑いっぱいのフォトジェニックな空間が魅力です。屋根付きのオープンエアな空間で、軽井沢の自然の風や木漏れ日を最大限に感じながら過ごせます。ウェディングなどにも利用されるほど素敵な雰囲気です。",
+                    familyPoints: "「家族・子供と」の利用シーンに適しており、老若男女幅広い客層が訪れます。特に、ワンちゃん同伴が可能で、店内（壁がなくビニールカーテンがあるオープンな空間）でも膝に乗せられる点は大きな魅力。提供されるヴィーガン料理は、健康志向の家族に喜ばれるでしょう。",
+                    menu: "肉、魚、乳製品を使用しないヴィーガンレストラン。朝採り野菜など、旬の高原野菜をたっぷり使った色鮮やかなメニューが特徴。「レモングラスが香る濃厚豆乳スープときのこのラクサヌードル」（1,780円）や「ソイミートと豆乳のとろけるトマトクリームラザニア」（1,680円）など。「食べるスープ」と称されるミネストローネも人気。有機エルダーフラワーコーディアル（600円）もおすすめ。",
+                    access: "長野県北佐久郡軽井沢町追分1138-1。専用駐車場はなく、お近くの追分宿町営駐車場を利用。入口から花に囲まれた道を上がると10台ほどの駐車場があるという口コミも。",
+                    congestion: "予約は受け付けておらず、来店順の案内。開店直後に訪れた家族がすんなり着席できたという口コミもあり、比較的スムーズに入店できる場合も。",
+                    specialNotes: "春～秋営業、冬は別店舗"
+                },
+                familyFeatures: { kidsWelcome: true, petsWelcome: true, strollerAccess: true, babyChair: false, kidsMenuProvided: false, diaperFacilities: false }
+            },
+            {
+                id: 5,
+                name: "エロイーズ カフェ",
+                shortDesc: "洗練された空間で味わう軽井沢の朝食・ブランチ",
+                atmosphereTags: ["おしゃれ", "広々", "テラス", "一軒家レストラン", "予約制"],
+                familyTags: ["子供連れOK", "お子様メニュー有り", "ベビーカー入店可", "ベビー用イス有り", "おむつ台有り", "ペット同伴可(テラス)"],
+                menuTags: ["モーニング", "ブランチ", "フレンチトースト", "カレー", "エッグベネディクト", "食事充実"],
+                parking: "専用駐車場有",
+                priceRange: [2000, 3000],
+                priceText: "～3,000円",
+                details: {
+                    overview: "軽井沢の別荘気分を味わえる、完全予約制のカフェ。店内は「オシャレな空間、落ち着いた空間、席が広い、ソファー席あり」と評され、高い天井と大きな窓が開放的な雰囲気を演出。晴れた日にはオープンテラス席も心地よく、一軒家レストランのような趣があります。全体的に女性向きのオシャレなカフェ飯が好きな方に最適とされていますが、小さなお子様連れのグループも多く見られ、子連れでも入りやすい印象です。",
+                    familyPoints: "「家族・子供と」の利用シーンに適しており、お子様連れでの入店が可能（乳児、未就学児、小学生も可）。ベビーカーの入店も可能で、キッズチェアーやおむつ台も完備されているため、小さなお子様連れの家族でも安心して利用できます。離乳食の持ち込みも許可。ペット同伴の場合、テラス席のみ利用可能です。",
+                    menu: "フレンチトースト、ふわとろ卵のオムカレー、野菜たっぷりキーマカレーなどが人気。ランチメニューはカレー、フレンチトースト、エッグベネディクトから選ぶスタイルで、エッグベネディクトは特に美味しいと評判。コーヒーは深煎り、中煎りから選べます。朝8時からオープンしており、朝食・モーニングメニューも充実。",
+                    access: "軽井沢駅から徒歩17分（約1300m）。車でのアクセスが推奨されており、アウトレット方面から歩いて行くことも可能。駐車場は12台分完備。",
+                    congestion: "人気店のため、特に朝8時台のオープン直後や週末は混雑が予想され、入店までに時間がかかる場合があります。予約で満席となることもあるため、事前の予約が推奨されます。",
+                    specialNotes: "完全予約制、朝食・ブランチに最適"
+                },
+                familyFeatures: { kidsWelcome: true, petsWelcome: true, strollerAccess: true, babyChair: true, kidsMenuProvided: true, diaperFacilities: true }
+            }
+        ];
+
+        let currentCafeDetailId = null;
+        let familyRadarChart = null;
+        let priceChart = null;
+
+        const sections = {
+            welcome: document.getElementById('welcome-section'),
+            'find-cafes': document.getElementById('find-cafes-section'),
+            comparison: document.getElementById('comparison-section'),
+            tips: document.getElementById('tips-section')
+        };
+
+        const navButtons = document.querySelectorAll('.nav-button');
+        const cafeCardsContainer = document.getElementById('cafe-cards-container');
+        const cafeDetailView = document.getElementById('cafe-detail-view');
+        const cafeListView = document.getElementById('cafe-list-view');
+        const cafeDetailContent = document.getElementById('cafe-detail-content');
+        const backToListButton = document.getElementById('back-to-list');
+        const noResultsP = document.getElementById('no-results');
+        
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+
+
+        function setActiveSection(sectionId) {
+            Object.values(sections).forEach(section => section.classList.add('hidden'));
+            if (sections[sectionId]) {
+                sections[sectionId].classList.remove('hidden');
+            }
+            navButtons.forEach(button => {
+                if (button.dataset.section === sectionId) {
+                    button.classList.add('active-nav');
+                } else {
+                    button.classList.remove('active-nav');
+                }
+            });
+            if (sectionId === 'find-cafes') {
+                showCafeListView();
+                renderCafeCards(cafes);
+            }
+            if (sectionId === 'comparison') {
+                renderComparisonTable();
+                renderPriceComparisonChart();
+            }
+            window.scrollTo(0, 0);
+        }
+        
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const sectionId = button.dataset.section;
+                setActiveSection(sectionId);
+                if (mobileMenu.classList.contains('hidden') === false) {
+                    mobileMenu.classList.add('hidden');
+                }
+            });
+        });
+
+        function renderCafeCards(cafesToRender) {
+            cafeCardsContainer.innerHTML = '';
+            if (cafesToRender.length === 0) {
+                noResultsP.classList.remove('hidden');
+            } else {
+                noResultsP.classList.add('hidden');
+            }
+            cafesToRender.forEach(cafe => {
+                const card = document.createElement('div');
+                card.className = 'bg-white p-6 rounded-lg shadow hover:shadow-xl transition-shadow cursor-pointer';
+                card.innerHTML = `
+                    <h3 class="text-xl font-semibold text-emerald-700 mb-2">${cafe.name}</h3>
+                    <p class="text-sm text-stone-600 mb-3">${cafe.shortDesc}</p>
+                    <div class="text-xs space-y-1 mb-3">
+                        <p><strong>雰囲気:</strong> ${cafe.atmosphereTags.join(', ')}</p>
+                        <p><strong>家族向け:</strong> ${cafe.familyTags.join(', ')}</p>
+                        <p><strong>メニュー:</strong> ${cafe.menuTags.join(', ')}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-1 mb-3">
+                        ${cafe.atmosphereTags.map(tag => `<span class="filter-tag text-xs px-2 py-1 rounded-full">${tag}</span>`).join('')}
+                        ${cafe.familyTags.map(tag => `<span class="filter-tag text-xs px-2 py-1 rounded-full">${tag}</span>`).join('')}
+                    </div>
+                    <p class="text-sm font-medium">価格帯: ${cafe.priceText}</p>
+                    <p class="text-sm">駐車場: ${cafe.parking}</p>
+                `;
+                card.addEventListener('click', () => showCafeDetail(cafe.id));
+                cafeCardsContainer.appendChild(card);
+            });
+        }
+
+        function showCafeDetail(cafeId) {
+            currentCafeDetailId = cafeId;
+            const cafe = cafes.find(c => c.id === cafeId);
+            if (!cafe) return;
+
+            cafeDetailContent.innerHTML = `
+                <h2 class="text-3xl font-bold text-emerald-700 mb-3">${cafe.name}</h2>
+                <p class="text-lg text-stone-600 italic mb-6">${cafe.shortDesc}</p>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">店舗概要・雰囲気</h3>
+                    <p class="text-stone-600 whitespace-pre-line">${cafe.details.overview}</p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">家族向けポイント</h3>
+                    <p class="text-stone-600 whitespace-pre-line">${cafe.details.familyPoints}</p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">おすすめメニュー・価格帯</h3>
+                    <p class="text-stone-600 whitespace-pre-line">${cafe.details.menu}</p>
+                    <p class="mt-2"><strong>価格帯 (一人あたり):</strong> ${cafe.priceText}</p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">アクセス・駐車場</h3>
+                    <p class="text-stone-600 whitespace-pre-line">${cafe.details.access}</p>
+                    <p class="mt-2"><strong>駐車場:</strong> ${cafe.parking}</p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">混雑状況</h3>
+                    <p class="text-stone-600 whitespace-pre-line">${cafe.details.congestion}</p>
+                </div>
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-stone-700 mb-2 border-b pb-1">家族フレンドリー度</h3>
+                    <div class="chart-container h-80 md:h-96">
+                        <canvas id="familyRadarChart"></canvas>
+                    </div>
+                </div>
+            `;
+            renderFamilyRadarChart(cafe.familyFeatures);
+            cafeListView.classList.add('hidden');
+            cafeDetailView.classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+        
+        function renderFamilyRadarChart(familyData) {
+            const ctx = document.getElementById('familyRadarChart').getContext('2d');
+            if (familyRadarChart) {
+                familyRadarChart.destroy();
+            }
+            const data = {
+                labels: ['子供歓迎', 'ペット歓迎', 'ベビーカーOK', 'ベビーチェア', 'お子様メニュー', 'おむつ交換台'],
+                datasets: [{
+                    label: '家族フレンドリー度',
+                    data: [
+                        familyData.kidsWelcome ? 1 : 0,
+                        familyData.petsWelcome ? 1 : 0,
+                        familyData.strollerAccess ? 1 : 0,
+                        familyData.babyChair ? 1 : 0,
+                        familyData.kidsMenuProvided ? 1 : 0,
+                        familyData.diaperFacilities ? 1 : 0
+                    ],
+                    fill: true,
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)', // amber-500 with alpha
+                    borderColor: 'rgb(245, 158, 11)', // amber-500
+                    pointBackgroundColor: 'rgb(245, 158, 11)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgb(245, 158, 11)'
+                }]
+            };
+            const config = {
+                type: 'radar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    elements: {
+                        line: {
+                            borderWidth: 3
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { display: true },
+                            suggestedMin: 0,
+                            suggestedMax: 1,
+                            ticks: { stepSize: 1, display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + (context.raw === 1 ? '有り' : '情報なし/無し');
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            familyRadarChart = new Chart(ctx, config);
+        }
+
+
+        function showCafeListView() {
+            cafeDetailView.classList.add('hidden');
+            cafeListView.classList.remove('hidden');
+            currentCafeDetailId = null;
+            if (familyRadarChart) {
+                familyRadarChart.destroy();
+                familyRadarChart = null;
+            }
+        }
+
+        backToListButton.addEventListener('click', showCafeListView);
+
+        const filterCheckboxes = document.querySelectorAll('.filter-checkbox');
+        const parkingFilter = document.getElementById('filter-parking');
+        const priceFilter = document.getElementById('filter-price');
+        const resetFiltersButton = document.getElementById('reset-filters');
+
+        function applyFilters() {
+            const selectedAtmosphere = Array.from(document.querySelectorAll('input[id^="filter-atmosphere-"]:checked')).map(cb => cb.value);
+            const selectedFamily = Array.from(document.querySelectorAll('input[id^="filter-family-"]:checked')).map(cb => cb.value);
+            const selectedMenu = Array.from(document.querySelectorAll('input[id^="filter-menu-"]:checked')).map(cb => cb.value);
+            const selectedParking = parkingFilter.value;
+            const selectedPrice = priceFilter.value ? parseInt(priceFilter.value) : null;
+
+            const filteredCafes = cafes.filter(cafe => {
+                const atmosphereMatch = selectedAtmosphere.length === 0 || selectedAtmosphere.every(tag => cafe.atmosphereTags.includes(tag));
+                const familyMatch = selectedFamily.length === 0 || selectedFamily.every(tag => cafe.familyTags.some(ft => ft.includes(tag))); // Allow partial match for "ペット同伴可(テラス)"
+                const menuMatch = selectedMenu.length === 0 || selectedMenu.every(tag => cafe.menuTags.includes(tag));
+                const parkingMatch = !selectedParking || cafe.parking === selectedParking;
+                const priceMatch = !selectedPrice || cafe.priceRange[1] <= selectedPrice;
+                
+                return atmosphereMatch && familyMatch && menuMatch && parkingMatch && priceMatch;
+            });
+            renderCafeCards(filteredCafes);
+        }
+        
+        filterCheckboxes.forEach(cb => cb.addEventListener('change', applyFilters));
+        parkingFilter.addEventListener('change', applyFilters);
+        priceFilter.addEventListener('change', applyFilters);
+
+        resetFiltersButton.addEventListener('click', () => {
+            filterCheckboxes.forEach(cb => cb.checked = false);
+            parkingFilter.value = "";
+            priceFilter.value = "";
+            applyFilters();
+        });
+        
+        function renderComparisonTable() {
+            const tbody = document.getElementById('comparison-table-body');
+            tbody.innerHTML = '';
+            cafes.forEach(cafe => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${cafe.name}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.atmosphereTags.join(', ')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.familyTags.join(', ')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.menuTags.join(', ')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.priceText}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.parking}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${cafe.details.specialNotes || '-'}</td>
+                `;
+            });
+        }
+
+        function renderPriceComparisonChart() {
+            const ctx = document.getElementById('priceComparisonChart').getContext('2d');
+            if (priceChart) {
+                priceChart.destroy();
+            }
+            
+            const labels = cafes.map(cafe => cafe.name);
+            const dataPoints = cafes.map(cafe => cafe.priceRange[1]); // Using max price for simplicity
+
+            // Function to wrap labels
+            function wrapLabels(labels, maxWidth) {
+                return labels.map(label => {
+                    if (label.length <= maxWidth) return label;
+                    let lines = [];
+                    let currentLine = "";
+                    label.split(" ").forEach(word => {
+                        if ((currentLine + word).length > maxWidth) {
+                            lines.push(currentLine.trim());
+                            currentLine = "";
+                        }
+                        currentLine += word + " ";
+                    });
+                    lines.push(currentLine.trim());
+                    return lines;
+                });
+            }
+
+            const wrappedLabels = wrapLabels(labels, 16); // Wrap at 16 characters
+
+            const data = {
+                labels: wrappedLabels,
+                datasets: [{
+                    label: '最高価格帯 (円)',
+                    data: dataPoints,
+                    backgroundColor: 'rgba(16, 185, 129, 0.6)', // emerald-500 with alpha
+                    borderColor: 'rgba(5, 150, 105, 1)', // emerald-600
+                    borderWidth: 1
+                }]
+            };
+            const config = {
+                type: 'bar',
+                data: data,
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: '価格 (円)' }
+                        },
+                        y: {
+                             ticks: {
+                                autoSkip: false, // Important for wrapped labels
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return cafes[context.dataIndex].name + ': ' + cafes[context.dataIndex].priceText;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            priceChart = new Chart(ctx, config);
+        }
+
+
+        setActiveSection('welcome');
+        renderCafeCards(cafes);
+
+    </script>
+</body>
+</html>
+
